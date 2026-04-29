@@ -97,5 +97,5 @@ app.post("/run-tool", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`MCP Gateway UI running on http://localhost:${PORT}`);
+  console.log(`InsightStudios MCP Gateway running on http://localhost:${PORT}`);
 });
