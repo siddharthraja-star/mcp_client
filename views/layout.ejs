@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Gateway</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f4f6f8; color: #222; }
+    header { background: #1a1a2e; color: #fff; padding: 16px 32px; display: flex; align-items: center; gap: 24px; }
+    header a { color: #a9b4c2; text-decoration: none; font-size: 14px; }
+    header a:hover { color: #fff; }
+    header .brand { font-weight: 700; font-size: 18px; color: #fff; margin-right: auto; }
+    main { max-width: 1600px; margin: 32px auto; padding: 0 40px; }
+    h1 { font-size: 22px; margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+    th { background: #1a1a2e; color: #fff; padding: 12px 16px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
+    td { padding: 11px 16px; font-size: 14px; border-bottom: 1px solid #eef0f3; word-break: break-all; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #f9fafc; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .badge-ok { background: #d1fae5; color: #065f46; }
+    .badge-err { background: #fee2e2; color: #991b1b; }
+    .error-box { background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+    .empty { color: #888; font-size: 14px; padding: 24px 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand">MCP Gateway</span>
+    <a href="/">Home</a>
+    <a href="/servers">Servers</a>
+    <a href="/tools">Tools</a>
+    <a href="/run-tool">Run Tool</a>
+  </header>
+  <main>
+    <%- body %>
+  </main>
+</body>
+</html>

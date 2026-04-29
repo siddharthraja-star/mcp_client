@@ -1,0 +1,282 @@
+<%
+const selectedServer = form.server || '';
+const selectedTool   = form.tool_name || '';
+
+const toolsJson = JSON.stringify(tools);
+
+const formHtml = `
+  <h1>Run Tool</h1>
+  <form method="POST" action="/run-tool"
+    style="background:#fff;padding:28px 32px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:32px;display:grid;gap:18px;max-width:860px">
+
+    <label style="font-size:14px;font-weight:600">
+      MCP Server
+      <select name="server" id="serverSelect"
+        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px">
+        <option value="">— default (.env) —</option>
+        ${servers.map(s => `<option value="${s}" ${s === selectedServer ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+    </label>
+
+    <label style="font-size:14px;font-weight:600">
+      Tool
+      <select name="tool_name" id="toolSelect"
+        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px">
+        <option value="">— select a tool —</option>
+        ${tools.map(t => `<option value="${t.name}" ${t.name === selectedTool ? 'selected' : ''}>${t.name}</option>`).join('')}
+      </select>
+    </label>
+
+    <div id="schemaHint" style="font-size:12px;color:#555;background:#f4f6f8;padding:10px 12px;border-radius:6px;display:none">
+      <strong>Required args:</strong> <span id="schemaHintText"></span>
+    </div>
+
+    <label style="font-size:14px;font-weight:600">
+      Arguments <span style="font-weight:400;color:#888">(JSON)</span>
+      <textarea name="arguments" id="argsInput" rows="5"
+        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:monospace">${form.arguments || '{}'}</textarea>
+    </label>
+
+    <button type="submit"
+      style="justify-self:start;padding:9px 22px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer">
+      Run
+    </button>
+  </form>
+
+  <script>
+    const TOOLS = ${toolsJson};
+
+    const serverSelect   = document.getElementById('serverSelect');
+    const toolSelect     = document.getElementById('toolSelect');
+    const argsInput      = document.getElementById('argsInput');
+    const schemaHint     = document.getElementById('schemaHint');
+    const schemaHintText = document.getElementById('schemaHintText');
+
+    function buildArgsTemplate(schema) {
+      if (!schema || !schema.properties) return '{}';
+      const t = {};
+      for (const [k, d] of Object.entries(schema.properties)) {
+        t[k] = d.default !== undefined ? d.default
+          : d.type === 'string'  ? ''
+          : d.type === 'number' || d.type === 'integer' ? 0
+          : d.type === 'boolean' ? false
+          : d.type === 'array'   ? []
+          : null;
+      }
+      return JSON.stringify(t, null, 2);
+    }
+
+    function onToolChange() {
+      const name = toolSelect.value;
+      const tool = TOOLS.find(t => t.name === name);
+      if (!tool) { schemaHint.style.display = 'none'; return; }
+      const schema = tool.inputSchema || {};
+      const required = schema.required || [];
+      const props = Object.keys(schema.properties || {});
+      if (props.length) {
+        schemaHintText.textContent = props.map(p => required.includes(p) ? p + '*' : p).join(', ');
+        schemaHint.style.display = '';
+      } else {
+        schemaHint.style.display = 'none';
+      }
+      if (!initialLoad) argsInput.value = buildArgsTemplate(schema);
+    }
+
+    async function onServerChange() {
+      const server = serverSelect.value;
+      const url = '/api/tools' + (server ? '?server=' + encodeURIComponent(server) : '');
+      try {
+        const res = await fetch(url);
+        const freshTools = await res.json();
+        TOOLS.length = 0;
+        freshTools.forEach(t => TOOLS.push(t));
+        const prev = toolSelect.value;
+        toolSelect.innerHTML = '<option value="">— select a tool —</option>' +
+          freshTools.map(t => '<option value="' + t.name + '"' + (t.name === prev ? ' selected' : '') + '>' + t.name + '</option>').join('');
+        onToolChange();
+      } catch(e) { console.error(e); }
+    }
+
+    let initialLoad = true;
+
+    toolSelect.addEventListener('change', () => { initialLoad = false; onToolChange(); });
+    serverSelect.addEventListener('change', onServerChange);
+
+    // On initial load: update schema hint only, don't overwrite existing args
+    onToolChange();
+  </script>
+`;
+
+// ── Log colorizer ──────────────────────────────────────────────────────────
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Fresh regex instances every call — avoids g-flag lastIndex corruption
+const mkAnsi    = () => /(\x1b)?\[[0-9;]*[mGKHF]/g;
+const mkLevel   = () => /\b(FATAL|ERROR|WARN(?:ING)?|INFO|DEBUG|TRACE)\b/g;
+const mkTs      = () => /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:[.,]\d+)?(?:Z|[+-]\d{2}:?\d{2})?)/g;
+const mkUuid    = () => /\b([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b/gi;
+const mkBracket = () => /\[([a-z][a-z0-9_]*):([\w.@/:=+\-]+)\]/gi;
+const mkKV      = () => /\b([a-z][a-z0-9_]*(?:_id|_key|_token|Id|Key|Token|ID))\s*=\s*([^\s,;}\]"']+)/g;
+
+const LEVEL_CSS = {
+  FATAL:   'background:#7f1d1d;color:#fef2f2',
+  ERROR:   'background:#991b1b;color:#fef2f2',
+  WARN:    'background:#92400e;color:#fffbeb',
+  WARNING: 'background:#92400e;color:#fffbeb',
+  INFO:    'background:#1e3a8a;color:#eff6ff',
+  DEBUG:   'background:#4c1d95;color:#f5f3ff',
+  TRACE:   'background:#374151;color:#f9fafb',
+};
+
+const ID_CSS = {
+  trace:       'background:#155e75;color:#ecfeff',
+  span:        'background:#155e75;color:#ecfeff',
+  correlation: 'background:#155e75;color:#ecfeff',
+  job:         'background:#4c1d95;color:#f5f3ff',
+  task:        'background:#14532d;color:#f0fdf4',
+  request:     'background:#1e3a8a;color:#eff6ff',
+  req:         'background:#1e3a8a;color:#eff6ff',
+  session:     'background:#581c87;color:#faf5ff',
+  user:        'background:#831843;color:#fdf2f8',
+};
+
+function getIdCss(key) {
+  const lk = key.toLowerCase();
+  for (const [p, s] of Object.entries(ID_CSS)) {
+    if (lk.startsWith(p)) return s;
+  }
+  return 'background:#155e75;color:#ecfeff';
+}
+
+const TAG = 'font-weight:700;font-size:11.5px;padding:2px 7px;border-radius:4px;' +
+            'margin:0 2px;vertical-align:middle;display:inline-block;line-height:1.6;' +
+            'letter-spacing:0.2px;font-family:monospace';
+
+function tag(css, text) {
+  return `<span style="${css};${TAG}">${text}</span>`;
+}
+
+function idTag(key, val) {
+  return tag(getIdCss(key), `${key}:<b style="font-weight:800">${val}</b>`);
+}
+
+function colorizeLine(raw) {
+  let line = esc(raw.replace(mkAnsi(), ''));
+  line = line.replace(mkTs(),      s  => `<span style="color:#374151;font-size:12px">${s}</span>`);
+  line = line.replace(mkLevel(),   m  => tag(LEVEL_CSS[m] || LEVEL_CSS.TRACE, m));
+  line = line.replace(mkBracket(), (_, k, v) => idTag(k, v));
+  line = line.replace(mkKV(),      (_, k, v) => idTag(k, v));
+  line = line.replace(mkUuid(),    m =>
+    m.includes('display:inline') ? m
+      : `<span style="background:#ecfeff;color:#155e75;font-weight:700;padding:0 3px;border-radius:3px">${m}</span>`
+  );
+  return line;
+}
+
+function isLogText(text) {
+  return mkLevel().test(text) || mkTs().test(text) || mkBracket().test(text);
+}
+
+function renderLog(text) {
+  const rawLines = text.split('\n');
+  // strip trailing blank lines
+  while (rawLines.length && !rawLines[rawLines.length - 1].trim()) rawLines.pop();
+
+  const lines = rawLines.map((line, i) => {
+    const lvl = (line.match(/\b(FATAL|ERROR|WARN|WARNING)\b/) || [])[1];
+    const rowBg = lvl === 'FATAL' || lvl === 'ERROR' ? '#fff5f5'
+                : lvl === 'WARN'  || lvl === 'WARNING' ? '#fffcf0'
+                : i % 2 === 0 ? '#ffffff' : '#f8fafc';
+    const borderLeft = lvl === 'FATAL' || lvl === 'ERROR' ? 'border-left:3px solid #dc2626;'
+                     : lvl === 'WARN'  || lvl === 'WARNING' ? 'border-left:3px solid #d97706;'
+                     : 'border-left:3px solid transparent;';
+    return `<div style="padding:4px 14px 4px 12px;background:${rowBg};${borderLeft}color:#111827;white-space:pre">${colorizeLine(line)}</div>`;
+  });
+
+  const lineCount = rawLines.length;
+  const footer = `<div style="padding:6px 14px;background:#f1f5f9;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b;font-family:monospace">${lineCount} line${lineCount !== 1 ? 's' : ''}</div>`;
+
+  return `<div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.75;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+    <div style="background:#1e293b;padding:8px 14px;display:flex;align-items:center;gap:8px">
+      <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block"></span>
+      <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block"></span>
+      <span style="width:10px;height:10px;border-radius:50%;background:#22c55e;display:inline-block"></span>
+      <span style="font-size:11px;color:#94a3b8;margin-left:6px;font-family:monospace">log output</span>
+    </div>
+    <div style="overflow-x:auto;max-height:600px;overflow-y:auto">${lines.join('')}</div>
+    ${footer}
+  </div>`;
+}
+
+// ── Content renderer ───────────────────────────────────────────────────────
+
+function renderContentItem(item) {
+  if (item.type === 'image') {
+    return `<img src="data:${item.mimeType};base64,${item.data}"
+      style="max-width:100%;border-radius:6px;border:1px solid #e5e7eb" />`;
+  }
+
+  const text = item.text || item.data || '';
+
+  let parsed = null;
+  try { parsed = JSON.parse(text); } catch {}
+
+  if (parsed !== null) {
+    if (Array.isArray(parsed) && parsed.length && typeof parsed[0] === 'object') {
+      const cols = [...new Set(parsed.flatMap(r => Object.keys(r)))];
+      const head = cols.map(c => `<th>${esc(c)}</th>`).join('');
+      const body = parsed.map(row =>
+        `<tr>${cols.map(c => `<td>${row[c] === undefined ? '' : esc(String(row[c]))}</td>`).join('')}</tr>`
+      ).join('');
+      return `<div style="overflow-x:auto"><table style="margin:0"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+    }
+    if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+      const rows = Object.entries(parsed).map(([k, v]) =>
+        `<tr><td style="font-weight:600;white-space:nowrap;color:#374151">${esc(k)}</td>
+             <td>${typeof v === 'object' ? `<pre style="margin:0;font-size:12px">${esc(JSON.stringify(v,null,2))}</pre>` : esc(String(v))}</td></tr>`
+      ).join('');
+      return `<table style="margin:0"><tbody>${rows}</tbody></table>`;
+    }
+    return `<code style="font-size:14px">${esc(JSON.stringify(parsed))}</code>`;
+  }
+
+  if (isLogText(text)) return renderLog(text);
+
+  return `<pre style="white-space:pre-wrap;font-size:13px;line-height:1.6;margin:0;color:#111827">${esc(text)}</pre>`;
+}
+
+// ── Result section ─────────────────────────────────────────────────────────
+
+let resultHtml = '';
+if (error) {
+  resultHtml = `<div class="error-box">${error}</div>`;
+} else if (result) {
+  const statusBadge = result.isError
+    ? '<span class="badge badge-err">Error</span>'
+    : '<span class="badge badge-ok">Success</span>';
+
+  const cards = result.content.map((item, i) => {
+    const label = result.content.length > 1
+      ? `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:10px">Output ${i + 1} &mdash; ${item.type}</div>`
+      : '';
+    const isLog = item.type !== 'image' && (() => { let p=null; try{p=JSON.parse(item.text||'')}catch{}; return p===null && isLogText(item.text||''); })();
+    const cardStyle = isLog
+      ? 'border:none;border-radius:8px;padding:0;margin-bottom:16px;overflow:hidden'
+      : 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:16px';
+    return `<div style="${cardStyle}">${label}${renderContentItem(item)}</div>`;
+  }).join('');
+
+  resultHtml = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+      <h2 style="font-size:16px;margin:0">Result</h2>
+      <span style="font-size:13px;color:#6b7280">${result.server}</span>
+      ${statusBadge}
+    </div>
+    ${cards}
+  `;
+}
+%>
+<%- include('layout', { body: formHtml + resultHtml }) %>

@@ -1,0 +1,56 @@
+<%
+const selected = locals.selected || '';
+
+const controls = `
+  <form method="GET" action="/tools" style="display:flex;align-items:flex-end;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <label style="font-size:14px;font-weight:600">
+      MCP Server
+      <select name="server" onchange="this.form.submit()"
+        style="display:block;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:200px">
+        <option value="">— default —</option>
+        ${servers.map(s => `<option value="${s}" ${s === server ? 'selected' : ''}>${s}</option>`).join('')}
+      </select>
+    </label>
+    <label style="font-size:14px;font-weight:600">
+      Filter Tool
+      <select id="toolFilter" onchange="filterTool(this.value)"
+        style="display:block;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:200px">
+        <option value="">— all tools —</option>
+        ${tools.map(t => `<option value="${t.name}" ${t.name === selected ? 'selected' : ''}>${t.name}</option>`).join('')}
+      </select>
+    </label>
+  </form>
+  <script>
+    function filterTool(name) {
+      document.querySelectorAll('tr[data-tool]').forEach(row => {
+        row.style.display = (!name || row.dataset.tool === name) ? '' : 'none';
+      });
+    }
+    filterTool(document.getElementById('toolFilter').value);
+  </script>
+`;
+
+const body = `
+  <h1>Tools &mdash; <span style="color:#555;font-weight:400">${server}</span></h1>
+  ${error ? `<div class="error-box">${error}</div>` : ''}
+  ${controls}
+  ${tools.length === 0 && !error ? '<p class="empty">No tools found.</p>' : `
+  <table>
+    <thead>
+      <tr><th>#</th><th>Name</th><th>Description</th><th>Input Schema</th><th></th></tr>
+    </thead>
+    <tbody>
+      ${tools.map((t, i) => `
+        <tr data-tool="${t.name}">
+          <td>${i + 1}</td>
+          <td><strong>${t.name}</strong></td>
+          <td>${t.description || '-'}</td>
+          <td><pre style="font-size:12px;white-space:pre-wrap">${JSON.stringify(t.inputSchema || {}, null, 2)}</pre></td>
+          <td><a href="/run-tool?server=${encodeURIComponent(server)}&tool=${encodeURIComponent(t.name)}" style="font-size:13px">Run</a></td>
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>`}
+`;
+%>
+<%- include('layout', { body }) %>
