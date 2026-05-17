@@ -21,7 +21,7 @@ const body = `
           <td><code>${r.command}</code></td>
           <td><code>${r.args || '-'}</code></td>
           <td>${r.type}</td>
-          <td style="font-size:12px;color:#666">${r.source}</td>
+          <td style="font-size:12px;color:var(--text-faint)">${r.source}</td>
           <td>
             <a href="/tools?server=${encodeURIComponent(r.name)}" style="font-size:13px">List Tools</a>
             &nbsp;|&nbsp;

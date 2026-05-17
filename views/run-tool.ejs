@@ -7,40 +7,40 @@ const toolsJson = JSON.stringify(tools);
 const formHtml = `
   <h1>Run Tool</h1>
   <form method="POST" action="/run-tool"
-    style="background:#fff;padding:28px 32px;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:32px;display:grid;gap:18px;max-width:860px">
+    style="background:var(--surface);padding:28px 32px;border-radius:8px;box-shadow:0 1px 4px var(--shadow);margin-bottom:32px;display:grid;gap:18px;max-width:860px;border:1px solid var(--border)">
 
-    <label style="font-size:14px;font-weight:600">
+    <label style="font-size:14px;font-weight:600;color:var(--text)">
       MCP Server
       <select name="server" id="serverSelect"
-        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px">
+        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--border-input);border-radius:6px;font-size:14px;background:var(--input-bg);color:var(--input-color)">
         <option value="">— default (.env) —</option>
         ${servers.map(s => `<option value="${s}" ${s === selectedServer ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
     </label>
 
-    <label style="font-size:14px;font-weight:600">
+    <label style="font-size:14px;font-weight:600;color:var(--text)">
       Tool
       <select name="tool_name" id="toolSelect"
-        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px">
+        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--border-input);border-radius:6px;font-size:14px;background:var(--input-bg);color:var(--input-color)">
         <option value="">— select a tool —</option>
         ${tools.map(t => `<option value="${t.name}" ${t.name === selectedTool ? 'selected' : ''}>${t.name}</option>`).join('')}
       </select>
     </label>
 
-    <div id="schemaHint" style="font-size:12px;color:#555;background:#f4f6f8;padding:10px 12px;border-radius:6px;display:none">
+    <div id="schemaHint" style="font-size:12px;color:var(--hint-color);background:var(--hint-bg);padding:10px 12px;border-radius:6px;display:none">
       <strong>Required args:</strong> <span id="schemaHintText"></span>
     </div>
 
-    <div id="argBuilder" style="display:none;flex-wrap:wrap;gap:6px;padding:10px 12px;background:#181b1f;border-radius:6px;border:1px solid #34373d"></div>
+    <div id="argBuilder" style="display:none;flex-wrap:wrap;gap:6px;padding:10px 12px;background:var(--builder-bg);border-radius:6px;border:1px solid var(--builder-border)"></div>
 
-    <label style="font-size:14px;font-weight:600">
-      Arguments <span style="font-weight:400;color:#888">(JSON)</span>
+    <label style="font-size:14px;font-weight:600;color:var(--text)">
+      Arguments <span style="font-weight:400;color:var(--text-faint)">(JSON)</span>
       <textarea name="arguments" id="argsInput" rows="5"
-        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;font-family:monospace">${form.arguments || '{}'}</textarea>
+        style="display:block;width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--border-input);border-radius:6px;font-size:13px;font-family:monospace;background:var(--input-bg);color:var(--input-color)">${form.arguments || '{}'}</textarea>
     </label>
 
     <button type="submit"
-      style="justify-self:start;padding:9px 22px;background:#1a1a2e;color:#fff;border:none;border-radius:6px;font-size:14px;cursor:pointer">
+      style="justify-self:start;padding:9px 22px;background:var(--btn-bg);color:var(--btn-color);border:none;border-radius:6px;font-size:14px;cursor:pointer">
       Run
     </button>
   </form>
@@ -142,19 +142,19 @@ const formHtml = `
       if (!entries.length) { argBuilder.style.display = 'none'; return; }
       const required = schema.required || [];
 
-      const LABEL = 'background:#22252b;color:#9ea5ad;padding:5px 10px;font-size:12px;font-family:monospace;font-weight:600;white-space:nowrap;display:flex;align-items:center;border-right:1px solid #44444b;user-select:none';
-      const INPUT = 'background:#2c3235;color:#e0e2e4;border:none;padding:5px 8px;font-size:12px;font-family:monospace;outline:none;flex:1;width:0;min-width:0';
+      const LABEL = 'background:var(--builder-label);color:var(--builder-lbl-fg);padding:5px 10px;font-size:12px;font-family:monospace;font-weight:600;white-space:nowrap;display:flex;align-items:center;border-right:1px solid var(--builder-chip-bd);user-select:none';
+      const INPUT = 'background:var(--builder-input);color:var(--builder-input-fg);border:none;padding:5px 8px;font-size:12px;font-family:monospace;outline:none;flex:1;width:0;min-width:0';
 
       entries.forEach(([key, def]) => {
         const val = propDefault(def);
         const isReq = required.includes(key);
 
         const wrap = document.createElement('span');
-        wrap.style.cssText = 'display:flex;align-items:stretch;border-radius:4px;overflow:hidden;border:1px solid ' + (isReq ? '#5c6bc0' : '#44444b') + ';flex:1;min-width:180px';
+        wrap.style.cssText = 'display:flex;align-items:stretch;border-radius:4px;overflow:hidden;border:1px solid ' + (isReq ? 'var(--builder-req-bd)' : 'var(--builder-chip-bd)') + ';flex:1;min-width:180px';
         wrap.title = def.description || '';
 
         const lbl = document.createElement('span');
-        lbl.style.cssText = LABEL + (isReq ? ';color:#9ea5ff' : '');
+        lbl.style.cssText = LABEL + (isReq ? ';color:var(--builder-req-fg)' : '');
         lbl.textContent = key;
         wrap.appendChild(lbl);
 
@@ -310,7 +310,7 @@ function idTag(key, val) {
 
 function colorizeLine(raw) {
   let line = esc(raw.replace(mkAnsi(), ''));
-  line = line.replace(mkTs(),      s  => `<span style="color:#374151;font-size:12px">${s}</span>`);
+  line = line.replace(mkTs(),      s  => `<span style="color:var(--log-ts-color);font-size:12px">${s}</span>`);
   line = line.replace(mkLevel(),   m  => tag(LEVEL_CSS[m] || LEVEL_CSS.TRACE, m));
   line = line.replace(mkBracket(), (_, k, v) => idTag(k, v));
   line = line.replace(mkKV(),      (_, k, v) => idTag(k, v));
@@ -332,19 +332,16 @@ function renderLog(text) {
 
   const lines = rawLines.map((line, i) => {
     const lvl = (line.match(/\b(FATAL|ERROR|WARN|WARNING)\b/) || [])[1];
-    const rowBg = lvl === 'FATAL' || lvl === 'ERROR' ? '#fff5f5'
-                : lvl === 'WARN'  || lvl === 'WARNING' ? '#fffcf0'
-                : i % 2 === 0 ? '#ffffff' : '#f8fafc';
-    const borderLeft = lvl === 'FATAL' || lvl === 'ERROR' ? 'border-left:3px solid #dc2626;'
-                     : lvl === 'WARN'  || lvl === 'WARNING' ? 'border-left:3px solid #d97706;'
-                     : 'border-left:3px solid transparent;';
-    return `<div style="padding:4px 14px 4px 12px;background:${rowBg};${borderLeft}color:#111827;white-space:pre">${colorizeLine(line)}</div>`;
+    const rowCls = lvl === 'FATAL' || lvl === 'ERROR' ? 'lr lr-err'
+                 : lvl === 'WARN'  || lvl === 'WARNING' ? 'lr lr-warn'
+                 : i % 2 === 0 ? 'lr lr-even' : 'lr lr-odd';
+    return `<div class="${rowCls}">${colorizeLine(line)}</div>`;
   });
 
   const lineCount = rawLines.length;
-  const footer = `<div style="padding:6px 14px;background:#f1f5f9;border-top:1px solid #e2e8f0;font-size:11px;color:#64748b;font-family:monospace">${lineCount} line${lineCount !== 1 ? 's' : ''}</div>`;
+  const footer = `<div style="padding:6px 14px;background:var(--log-footer-bg);border-top:1px solid var(--log-footer-bd);font-size:11px;color:var(--log-footer-fg);font-family:monospace">${lineCount} line${lineCount !== 1 ? 's' : ''}</div>`;
 
-  return `<div style="background:#fff;border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.75;box-shadow:0 1px 3px rgba(0,0,0,.06)">
+  return `<div style="background:var(--surface);border:1px solid var(--log-border);border-radius:8px;overflow:hidden;font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:13px;line-height:1.75;box-shadow:0 1px 3px var(--shadow)">
     <div style="background:#1e293b;padding:8px 14px;display:flex;align-items:center;gap:8px">
       <span style="width:10px;height:10px;border-radius:50%;background:#ef4444;display:inline-block"></span>
       <span style="width:10px;height:10px;border-radius:50%;background:#f59e0b;display:inline-block"></span>
@@ -361,7 +358,7 @@ function renderLog(text) {
 function renderContentItem(item) {
   if (item.type === 'image') {
     return `<img src="data:${item.mimeType};base64,${item.data}"
-      style="max-width:100%;border-radius:6px;border:1px solid #e5e7eb" />`;
+      style="max-width:100%;border-radius:6px;border:1px solid var(--border)" />`;
   }
 
   const text = item.text || item.data || '';
@@ -380,7 +377,7 @@ function renderContentItem(item) {
     }
     if (typeof parsed === 'object' && !Array.isArray(parsed)) {
       const rows = Object.entries(parsed).map(([k, v]) =>
-        `<tr><td style="font-weight:600;white-space:nowrap;color:#374151">${esc(k)}</td>
+        `<tr><td style="font-weight:600;white-space:nowrap;color:var(--text-muted)">${esc(k)}</td>
              <td>${typeof v === 'object' ? `<pre style="margin:0;font-size:12px">${esc(JSON.stringify(v,null,2))}</pre>` : esc(String(v))}</td></tr>`
       ).join('');
       return `<table style="margin:0"><tbody>${rows}</tbody></table>`;
@@ -390,7 +387,7 @@ function renderContentItem(item) {
 
   if (isLogText(text)) return renderLog(text);
 
-  return `<pre style="white-space:pre-wrap;font-size:13px;line-height:1.6;margin:0;color:#111827">${esc(text)}</pre>`;
+  return `<pre style="white-space:pre-wrap;font-size:13px;line-height:1.6;margin:0;color:var(--text)">${esc(text)}</pre>`;
 }
 
 // ── Result section ─────────────────────────────────────────────────────────
@@ -405,19 +402,19 @@ if (error) {
 
   const cards = result.content.map((item, i) => {
     const label = result.content.length > 1
-      ? `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:10px">Output ${i + 1} &mdash; ${item.type}</div>`
+      ? `<div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-faint);margin-bottom:10px">Output ${i + 1} &mdash; ${item.type}</div>`
       : '';
     const isLog = item.type !== 'image' && (() => { let p=null; try{p=JSON.parse(item.text||'')}catch{}; return p===null && isLogText(item.text||''); })();
     const cardStyle = isLog
       ? 'border:none;border-radius:8px;padding:0;margin-bottom:16px;overflow:hidden'
-      : 'background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:20px;margin-bottom:16px';
+      : 'background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:20px;margin-bottom:16px';
     return `<div style="${cardStyle}">${label}${renderContentItem(item)}</div>`;
   }).join('');
 
   resultHtml = `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
       <h2 style="font-size:16px;margin:0">Result</h2>
-      <span style="font-size:13px;color:#6b7280">${result.server}</span>
+      <span style="font-size:13px;color:var(--text-faint)">${result.server}</span>
       ${statusBadge}
     </div>
     ${cards}

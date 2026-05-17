@@ -1,28 +1,209 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>InsightStudios MCP Gateway</title>
   <style>
+    :root {
+      --bg:              #0f1117;
+      --surface:         #161b27;
+      --surface-alt:     #1c2133;
+      --surface-hover:   #1e2540;
+      --text:            #cdd5e0;
+      --text-muted:      #8b9ab0;
+      --text-faint:      #5c6b80;
+      --border:          #2a3347;
+      --border-input:    #3a4460;
+      --header-bg:       #0b0d16;
+      --header-link:     #6b7fa0;
+      --th-bg:           #0b0d16;
+      --th-color:        #cdd5e0;
+      --input-bg:        #1a2035;
+      --input-color:     #cdd5e0;
+      --btn-bg:          #3d4f7c;
+      --btn-color:       #e8edf5;
+      --btn-hover:       #4a5e90;
+      --badge-ok-bg:     #064e3b;
+      --badge-ok-fg:     #6ee7b7;
+      --badge-err-bg:    #7f1d1d;
+      --badge-err-fg:    #fca5a5;
+      --err-box-bg:      #3b1219;
+      --err-box-fg:      #fca5a5;
+      --shadow:          rgba(0,0,0,.4);
+      --code-bg:         #0f1520;
+      --code-color:      #8b9ab0;
+      --hint-bg:         #12182a;
+      --hint-color:      #8b9ab0;
+      --link-color:      #7b9ce0;
+      --builder-bg:      #0e1118;
+      --builder-border:  #252b38;
+      --builder-label:   #171c26;
+      --builder-lbl-fg:  #7b8ba0;
+      --builder-input:   #1a2035;
+      --builder-input-fg:#cdd5e0;
+      --builder-chip-bd: #2e3a50;
+      --builder-req-bd:  #4a5a9e;
+      --builder-req-fg:  #8899dd;
+      --log-row-even:    #161b27;
+      --log-row-odd:     #1c2133;
+      --log-row-err:     #2a1010;
+      --log-row-warn:    #221a09;
+      --log-text:        #cdd5e0;
+      --log-ts-color:    #8b9ab0;
+      --log-footer-bg:   #0f1520;
+      --log-footer-bd:   #2a3347;
+      --log-footer-fg:   #5c6b80;
+      --log-border:      #2a3347;
+    }
+
+    [data-theme="dark"] {
+      --bg:              #f4f6f8;
+      --surface:         #ffffff;
+      --surface-alt:     #f8fafc;
+      --surface-hover:   #f0f4f8;
+      --text:            #1a1d27;
+      --text-muted:      #555e70;
+      --text-faint:      #8896a8;
+      --border:          #e4e8ef;
+      --border-input:    #d1d5db;
+      --header-bg:       #1a1a2e;
+      --header-link:     #a9b4c2;
+      --th-bg:           #1a1a2e;
+      --th-color:        #ffffff;
+      --input-bg:        #ffffff;
+      --input-color:     #1a1d27;
+      --btn-bg:          #1a1a2e;
+      --btn-color:       #ffffff;
+      --btn-hover:       #2d2d4e;
+      --badge-ok-bg:     #d1fae5;
+      --badge-ok-fg:     #065f46;
+      --badge-err-bg:    #fee2e2;
+      --badge-err-fg:    #991b1b;
+      --err-box-bg:      #fee2e2;
+      --err-box-fg:      #991b1b;
+      --shadow:          rgba(0,0,0,.08);
+      --code-bg:         #f0f4f8;
+      --code-color:      #1a1d27;
+      --hint-bg:         #f4f6f8;
+      --hint-color:      #555e70;
+      --link-color:      #1a1a2e;
+      --builder-bg:      #181b1f;
+      --builder-border:  #34373d;
+      --builder-label:   #22252b;
+      --builder-lbl-fg:  #9ea5ad;
+      --builder-input:   #2c3235;
+      --builder-input-fg:#e0e2e4;
+      --builder-chip-bd: #44444b;
+      --builder-req-bd:  #5c6bc0;
+      --builder-req-fg:  #9ea5ff;
+      --log-row-even:    #ffffff;
+      --log-row-odd:     #f8fafc;
+      --log-row-err:     #fff5f5;
+      --log-row-warn:    #fffcf0;
+      --log-text:        #111827;
+      --log-ts-color:    #374151;
+      --log-footer-bg:   #f1f5f9;
+      --log-footer-bd:   #e2e8f0;
+      --log-footer-fg:   #64748b;
+      --log-border:      #cbd5e1;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; background: #f4f6f8; color: #222; }
-    header { background: #1a1a2e; color: #fff; padding: 16px 32px; display: flex; align-items: center; gap: 24px; }
-    header a { color: #a9b4c2; text-decoration: none; font-size: 14px; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      transition: background .2s, color .2s;
+    }
+
+    header {
+      background: var(--header-bg);
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+    header a { color: var(--header-link); text-decoration: none; font-size: 14px; transition: color .15s; }
     header a:hover { color: #fff; }
     header .brand { font-weight: 700; font-size: 18px; color: #fff; margin-right: auto; }
+
     main { max-width: 1600px; margin: 32px auto; padding: 0 40px; }
     h1 { font-size: 22px; margin-bottom: 20px; }
-    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-    th { background: #1a1a2e; color: #fff; padding: 12px 16px; text-align: left; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; }
-    td { padding: 11px 16px; font-size: 14px; border-bottom: 1px solid #eef0f3; word-break: break-all; }
+    h2 { font-size: 16px; }
+
+    a { color: var(--link-color); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 1px 4px var(--shadow);
+    }
+    th {
+      background: var(--th-bg);
+      color: var(--th-color);
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+    td {
+      padding: 11px 16px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+      word-break: break-all;
+      color: var(--text);
+    }
     tr:last-child td { border-bottom: none; }
-    tr:hover td { background: #f9fafc; }
+    tr:hover td { background: var(--surface-alt); }
+
+    code {
+      background: var(--code-bg);
+      color: var(--code-color);
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    select, input, textarea {
+      background: var(--input-bg);
+      color: var(--input-color);
+      border-color: var(--border-input);
+      transition: background .2s, color .2s, border-color .2s;
+    }
+
     .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
-    .badge-ok { background: #d1fae5; color: #065f46; }
-    .badge-err { background: #fee2e2; color: #991b1b; }
-    .error-box { background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
-    .empty { color: #888; font-size: 14px; padding: 24px 0; }
+    .badge-ok  { background: var(--badge-ok-bg);  color: var(--badge-ok-fg); }
+    .badge-err { background: var(--badge-err-bg); color: var(--badge-err-fg); }
+    .error-box { background: var(--err-box-bg); color: var(--err-box-fg); padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
+    .empty { color: var(--text-faint); font-size: 14px; padding: 24px 0; }
+
+    /* log viewer row classes */
+    .lr { padding: 4px 14px 4px 12px; white-space: pre; color: var(--log-text); }
+    .lr-even { background: var(--log-row-even); border-left: 3px solid transparent; }
+    .lr-odd  { background: var(--log-row-odd);  border-left: 3px solid transparent; }
+    .lr-err  { background: var(--log-row-err);  border-left: 3px solid #dc2626; }
+    .lr-warn { background: var(--log-row-warn); border-left: 3px solid #d97706; }
+
+    #themeToggle {
+      background: rgba(255,255,255,.1);
+      color: #d0d8e8;
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .2s;
+      letter-spacing: .2px;
+    }
+    #themeToggle:hover { background: rgba(255,255,255,.18); }
   </style>
 </head>
 <body>
@@ -32,9 +213,29 @@
     <a href="/servers">Servers</a>
     <a href="/tools">Tools</a>
     <a href="/run-tool">Run Tool</a>
+    <button id="themeToggle" onclick="toggleTheme()">Dark mode</button>
   </header>
   <main>
     <%- body %>
   </main>
+  <script>
+    (function () {
+      const saved = localStorage.getItem('mcp-theme') || 'light';
+      applyTheme(saved);
+
+      function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        const btn = document.getElementById('themeToggle');
+        if (btn) btn.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+      }
+
+      window.toggleTheme = function () {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        const next = cur === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('mcp-theme', next);
+        applyTheme(next);
+      };
+    })();
+  </script>
 </body>
 </html>

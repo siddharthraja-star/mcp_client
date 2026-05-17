@@ -3,18 +3,18 @@ const selected = locals.selected || '';
 
 const controls = `
   <form method="GET" action="/tools" style="display:flex;align-items:flex-end;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-    <label style="font-size:14px;font-weight:600">
+    <label style="font-size:14px;font-weight:600;color:var(--text)">
       MCP Server
       <select name="server" onchange="this.form.submit()"
-        style="display:block;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:200px">
+        style="display:block;margin-top:6px;padding:8px 10px;border:1px solid var(--border-input);border-radius:6px;font-size:14px;min-width:200px;background:var(--input-bg);color:var(--input-color)">
         <option value="">— default —</option>
         ${servers.map(s => `<option value="${s}" ${s === server ? 'selected' : ''}>${s}</option>`).join('')}
       </select>
     </label>
-    <label style="font-size:14px;font-weight:600">
+    <label style="font-size:14px;font-weight:600;color:var(--text)">
       Filter Tool
       <select id="toolFilter" onchange="filterTool(this.value)"
-        style="display:block;margin-top:6px;padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:14px;min-width:200px">
+        style="display:block;margin-top:6px;padding:8px 10px;border:1px solid var(--border-input);border-radius:6px;font-size:14px;min-width:200px;background:var(--input-bg);color:var(--input-color)">
         <option value="">— all tools —</option>
         ${tools.map(t => `<option value="${t.name}" ${t.name === selected ? 'selected' : ''}>${t.name}</option>`).join('')}
       </select>
@@ -31,7 +31,7 @@ const controls = `
 `;
 
 const body = `
-  <h1>Tools &mdash; <span style="color:#555;font-weight:400">${server}</span></h1>
+  <h1>Tools &mdash; <span style="color:var(--text-muted);font-weight:400">${server}</span></h1>
   ${error ? `<div class="error-box">${error}</div>` : ''}
   ${controls}
   ${tools.length === 0 && !error ? '<p class="empty">No tools found.</p>' : `
