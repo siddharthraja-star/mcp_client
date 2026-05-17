@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const axios = require("axios");
+const { marked } = require("marked");
 
 const app = express();
 const PORT = process.env.UI_PORT || 3000;
@@ -68,6 +69,25 @@ app.get("/api/tools", async (req, res) => {
   }
 });
 
+app.get("/api/rca-docs", async (req, res) => {
+  const server = req.query.server || null;
+  try {
+    const { data } = await axios.post(`${API_URL}/call-tool`, {
+      server,
+      tool_name: "list_rca_docs",
+      arguments: {},
+    });
+    const text = data.content?.[0]?.text || "";
+    const files = text.split("\n")
+      .map(l => l.trim())
+      .filter(l => l.startsWith("- "))
+      .map(l => l.slice(2).trim());
+    res.json(files);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/api/containers", async (req, res) => {
   const server = req.query.server || null;
   try {
@@ -88,7 +108,7 @@ app.get("/api/containers", async (req, res) => {
 app.get("/run-tool", async (req, res) => {
   const server = req.query.server || "";
   const { servers, tools } = await fetchServersAndTools(server);
-  res.render("run-tool", { servers, tools, result: null, error: null, form: { server, tool_name: req.query.tool || "" } });
+  res.render("run-tool", { servers, tools, result: null, error: null, form: { server, tool_name: req.query.tool || "" }, marked });
 });
 
 app.post("/run-tool", async (req, res) => {
@@ -98,7 +118,7 @@ app.post("/run-tool", async (req, res) => {
   try {
     if (rawArgs && rawArgs.trim()) parsedArgs = JSON.parse(rawArgs);
   } catch {
-    return res.render("run-tool", { servers, tools, result: null, error: "Arguments must be valid JSON", form: req.body });
+    return res.render("run-tool", { servers, tools, result: null, error: "Arguments must be valid JSON", form: req.body, marked });
   }
   try {
     const { data } = await axios.post(`${API_URL}/call-tool`, {
@@ -106,10 +126,10 @@ app.post("/run-tool", async (req, res) => {
       tool_name,
       arguments: parsedArgs,
     });
-    res.render("run-tool", { servers, tools, result: data, error: null, form: req.body });
+    res.render("run-tool", { servers, tools, result: data, error: null, form: req.body, marked });
   } catch (err) {
     const detail = err.response?.data?.detail || err.message;
-    res.render("run-tool", { servers, tools, result: null, error: detail, form: req.body });
+    res.render("run-tool", { servers, tools, result: null, error: detail, form: req.body, marked });
   }
 });
 

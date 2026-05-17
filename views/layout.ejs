@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>InsightStudios MCP Gateway</title>
+  <!-- highlight.js — theme switches with the UI theme -->
+  <link id="hljs-css" rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
   <style>
     :root {
       --bg:              #0f1117;
@@ -184,6 +188,90 @@
     .error-box { background: var(--err-box-bg); color: var(--err-box-fg); padding: 12px 16px; border-radius: 6px; margin-bottom: 16px; font-size: 14px; }
     .empty { color: var(--text-faint); font-size: 14px; padding: 24px 0; }
 
+    /* ── markdown document viewer ─────────────────────────────────────── */
+    .md-viewer {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px var(--shadow);
+    }
+    .md-viewer-bar {
+      background: var(--th-bg);
+      color: var(--th-color);
+      padding: 8px 16px;
+      font-size: 12px;
+      font-family: 'JetBrains Mono','Fira Code',monospace;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: .2px;
+    }
+    .md-viewer-bar .md-icon { opacity: .7; }
+    .md-scroll {
+      max-height: 80vh;
+      overflow-y: auto;
+      background: var(--surface);
+    }
+    .md-body {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 36px 48px;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 15px;
+      line-height: 1.75;
+    }
+    .md-body h1 {
+      font-size: 26px; font-weight: 700; margin: 0 0 16px;
+      padding-bottom: 10px; border-bottom: 2px solid var(--border); color: var(--text);
+    }
+    .md-body h2 {
+      font-size: 20px; font-weight: 700; margin: 32px 0 12px;
+      padding-bottom: 6px; border-bottom: 1px solid var(--border); color: var(--text);
+    }
+    .md-body h3 { font-size: 16px; font-weight: 700; margin: 24px 0 8px; color: var(--text); }
+    .md-body h4, .md-body h5, .md-body h6 { font-size: 14px; font-weight: 600; margin: 18px 0 6px; color: var(--text-muted); }
+    .md-body p { margin: 0 0 14px; }
+    .md-body ul { margin: 0 0 14px 24px; list-style: disc; }
+    .md-body ol { margin: 0 0 14px 24px; list-style: decimal; }
+    .md-body li { margin-bottom: 5px; }
+    .md-body li > ul, .md-body li > ol { margin-top: 4px; margin-bottom: 4px; }
+    .md-body strong { font-weight: 700; color: var(--text); }
+    .md-body em { font-style: italic; }
+    .md-body hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+    .md-body blockquote {
+      border-left: 4px solid var(--border-input); margin: 0 0 14px;
+      padding: 8px 16px; color: var(--text-muted);
+      background: var(--surface-alt); border-radius: 0 6px 6px 0;
+    }
+    .md-body code {
+      background: var(--code-bg); color: var(--code-color);
+      padding: 2px 6px; border-radius: 4px;
+      font-size: 13px; font-family: 'JetBrains Mono','Fira Code','Cascadia Code',monospace;
+    }
+    .md-body pre {
+      border-radius: 8px; overflow-x: auto; margin: 0 0 18px;
+      font-size: 13px; line-height: 1.6;
+    }
+    .md-body pre code { background: none; padding: 0; border-radius: 0; font-size: inherit; }
+    .md-body table { width: 100%; border-collapse: collapse; margin: 0 0 18px; font-size: 13.5px; }
+    .md-body thead tr { background: var(--th-bg); }
+    .md-body th {
+      color: var(--th-color); padding: 9px 14px;
+      text-align: left; font-weight: 600; font-size: 12px;
+      text-transform: uppercase; letter-spacing: .5px;
+    }
+    .md-body td {
+      padding: 9px 14px; border-bottom: 1px solid var(--border);
+      color: var(--text); vertical-align: top; word-break: break-word;
+    }
+    .md-body tr:nth-child(even) td { background: var(--surface-alt); }
+    .md-body tr:hover td { background: var(--surface-hover); }
+    .md-body tr:last-child td { border-bottom: none; }
+    .md-body a { color: var(--link-color); text-decoration: underline; }
+    .md-body img { max-width: 100%; border-radius: 6px; border: 1px solid var(--border); }
+
     /* log viewer row classes */
     .lr { padding: 4px 14px 4px 12px; white-space: pre; color: var(--log-text); }
     .lr-even { background: var(--log-row-even); border-left: 3px solid transparent; }
@@ -227,7 +315,14 @@
         document.documentElement.setAttribute('data-theme', t);
         const btn = document.getElementById('themeToggle');
         if (btn) btn.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+        // 'light' attr = dark UI; 'dark' attr = light UI (themes are swapped)
+        const hljsCss = document.getElementById('hljs-css');
+        if (hljsCss) hljsCss.href = t === 'light'
+          ? 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css'
+          : 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
       }
+
+      if (typeof hljs !== 'undefined') hljs.highlightAll();
 
       window.toggleTheme = function () {
         const cur = document.documentElement.getAttribute('data-theme') || 'light';

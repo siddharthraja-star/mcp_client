@@ -128,6 +128,26 @@ const formHtml = `
         (def.description || '').toLowerCase().includes('container name');
     }
 
+    function isFilenameFilterField(key) {
+      return key === 'filename_filter';
+    }
+
+    async function fetchRcaDocs(server) {
+      const url = '/api/rca-docs' + (server ? '?server=' + encodeURIComponent(server) : '');
+      try {
+        const res = await fetch(url);
+        return res.ok ? await res.json() : [];
+      } catch { return []; }
+    }
+
+    function populateRcaDocsSelect(sel, files, currentVal) {
+      sel.innerHTML = '<option value="">— all files —</option>' +
+        files.map(f =>
+          '<option value="' + f + '"' + (f === currentVal ? ' selected' : '') + '>' + f + '</option>'
+        ).join('');
+      if (currentVal) sel.value = currentVal;
+    }
+
     function renderArgBuilder(schema) {
       argBuilder.innerHTML = '';
       if (!schema || !schema.properties) { argBuilder.style.display = 'none'; return; }
@@ -167,6 +187,14 @@ const formHtml = `
             populateContainerSelect(ctrl, containers, String(val || ''));
             syncToBuilder(argsInput.value);
           });
+        } else if (isFilenameFilterField(key)) {
+          ctrl = document.createElement('select');
+          ctrl.innerHTML = '<option value="">Loading…</option>';
+          ctrl.dataset.type = 'filename_filter';
+          fetchRcaDocs(serverSelect.value).then(files => {
+            populateRcaDocsSelect(ctrl, files, String(val || ''));
+            syncToBuilder(argsInput.value);
+          });
         } else if (def.type === 'boolean') {
           ctrl = document.createElement('select');
           ctrl.innerHTML = '<option value="false">false</option><option value="true">true</option>';
@@ -202,6 +230,13 @@ const formHtml = `
         sel.innerHTML = '<option value="">Loading…</option>';
         fetchContainers(serverSelect.value).then(containers => {
           populateContainerSelect(sel, containers, currentVal);
+        });
+      });
+      argBuilder.querySelectorAll('[data-type="filename_filter"]').forEach(sel => {
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Loading…</option>';
+        fetchRcaDocs(serverSelect.value).then(files => {
+          populateRcaDocsSelect(sel, files, currentVal);
         });
       });
     }
@@ -355,6 +390,23 @@ function renderLog(text) {
 
 // ── Content renderer ───────────────────────────────────────────────────────
 
+function isMarkdownText(text) {
+  return /^#{1,6} \S/m.test(text);
+}
+
+function renderMarkdown(text) {
+  const html = marked.parse(text);
+  return `<div class="md-viewer">
+    <div class="md-viewer-bar">
+      <span class="md-icon">&#128196;</span>
+      <span>Markdown Preview</span>
+    </div>
+    <div class="md-scroll">
+      <div class="md-body">${html}</div>
+    </div>
+  </div>`;
+}
+
 function renderContentItem(item) {
   if (item.type === 'image') {
     return `<img src="data:${item.mimeType};base64,${item.data}"
@@ -385,6 +437,7 @@ function renderContentItem(item) {
     return `<code style="font-size:14px">${esc(JSON.stringify(parsed))}</code>`;
   }
 
+  if (isMarkdownText(text)) return renderMarkdown(text);
   if (isLogText(text)) return renderLog(text);
 
   return `<pre style="white-space:pre-wrap;font-size:13px;line-height:1.6;margin:0;color:var(--text)">${esc(text)}</pre>`;
