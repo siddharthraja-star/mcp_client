@@ -31,6 +31,8 @@ const formHtml = `
       <strong>Required args:</strong> <span id="schemaHintText"></span>
     </div>
 
+    <div id="argBuilder" style="display:none;flex-wrap:wrap;gap:6px;padding:10px 12px;background:#181b1f;border-radius:6px;border:1px solid #34373d"></div>
+
     <label style="font-size:14px;font-weight:600">
       Arguments <span style="font-weight:400;color:#888">(JSON)</span>
       <textarea name="arguments" id="argsInput" rows="5"
@@ -51,25 +53,165 @@ const formHtml = `
     const argsInput      = document.getElementById('argsInput');
     const schemaHint     = document.getElementById('schemaHint');
     const schemaHintText = document.getElementById('schemaHintText');
+    const argBuilder     = document.getElementById('argBuilder');
+
+    function propDefault(d) {
+      if (d.default !== undefined) return d.default;
+      if (d.type === 'string')  return '';
+      if (d.type === 'number' || d.type === 'integer') return 0;
+      if (d.type === 'boolean') return false;
+      if (d.type === 'array')   return [];
+      return null;
+    }
 
     function buildArgsTemplate(schema) {
       if (!schema || !schema.properties) return '{}';
       const t = {};
-      for (const [k, d] of Object.entries(schema.properties)) {
-        t[k] = d.default !== undefined ? d.default
-          : d.type === 'string'  ? ''
-          : d.type === 'number' || d.type === 'integer' ? 0
-          : d.type === 'boolean' ? false
-          : d.type === 'array'   ? []
-          : null;
-      }
+      for (const [k, d] of Object.entries(schema.properties)) t[k] = propDefault(d);
       return JSON.stringify(t, null, 2);
     }
+
+    let syncing = false;
+
+    function syncFromBuilder() {
+      if (syncing) return;
+      syncing = true;
+      const cur = {};
+      argBuilder.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.dataset.key;
+        const type = el.dataset.type;
+        let val;
+        if (type === 'boolean') val = el.value === 'true';
+        else if (type === 'integer') val = el.value === '' ? null : parseInt(el.value, 10);
+        else if (type === 'number')  val = el.value === '' ? null : parseFloat(el.value);
+        else if (type === 'array') { try { val = JSON.parse(el.value); } catch { val = el.value.split(',').map(s => s.trim()).filter(Boolean); } }
+        else val = el.value;
+        cur[key] = val;
+      });
+      argsInput.value = JSON.stringify(cur, null, 2);
+      syncing = false;
+    }
+
+    function syncToBuilder(json) {
+      if (syncing) return;
+      let parsed; try { parsed = JSON.parse(json); } catch { return; }
+      syncing = true;
+      argBuilder.querySelectorAll('[data-key]').forEach(el => {
+        const key = el.dataset.key;
+        if (!(key in parsed)) return;
+        const v = parsed[key];
+        el.value = typeof v === 'object' ? JSON.stringify(v) : String(v ?? '');
+      });
+      syncing = false;
+    }
+
+    async function fetchContainers(server) {
+      const url = '/api/containers' + (server ? '?server=' + encodeURIComponent(server) : '');
+      try {
+        const res = await fetch(url);
+        return res.ok ? await res.json() : [];
+      } catch { return []; }
+    }
+
+    function populateContainerSelect(sel, containers, currentVal) {
+      sel.innerHTML = '<option value="">— select container —</option>' +
+        containers.map(c =>
+          '<option value="' + c.name + '"' + (c.name === currentVal ? ' selected' : '') + '>' +
+          c.name + ' · ' + c.id + ' [' + c.status + ']</option>'
+        ).join('');
+      if (currentVal && !sel.value) sel.value = currentVal;
+    }
+
+    function isContainerIdField(key, def) {
+      return key === 'container_id' ||
+        (def.description || '').toLowerCase().includes('container id') ||
+        (def.description || '').toLowerCase().includes('container name');
+    }
+
+    function renderArgBuilder(schema) {
+      argBuilder.innerHTML = '';
+      if (!schema || !schema.properties) { argBuilder.style.display = 'none'; return; }
+      const PRIORITY = ['container_id', 'trace_id', 'job_id', 'tail', 'since', 'task'];
+      const entries = Object.entries(schema.properties).sort(([a], [b]) => {
+        const ai = PRIORITY.indexOf(a), bi = PRIORITY.indexOf(b);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      });
+      if (!entries.length) { argBuilder.style.display = 'none'; return; }
+      const required = schema.required || [];
+
+      const LABEL = 'background:#22252b;color:#9ea5ad;padding:5px 10px;font-size:12px;font-family:monospace;font-weight:600;white-space:nowrap;display:flex;align-items:center;border-right:1px solid #44444b;user-select:none';
+      const INPUT = 'background:#2c3235;color:#e0e2e4;border:none;padding:5px 8px;font-size:12px;font-family:monospace;outline:none;flex:1;width:0;min-width:0';
+
+      entries.forEach(([key, def]) => {
+        const val = propDefault(def);
+        const isReq = required.includes(key);
+
+        const wrap = document.createElement('span');
+        wrap.style.cssText = 'display:flex;align-items:stretch;border-radius:4px;overflow:hidden;border:1px solid ' + (isReq ? '#5c6bc0' : '#44444b') + ';flex:1;min-width:180px';
+        wrap.title = def.description || '';
+
+        const lbl = document.createElement('span');
+        lbl.style.cssText = LABEL + (isReq ? ';color:#9ea5ff' : '');
+        lbl.textContent = key;
+        wrap.appendChild(lbl);
+
+        let ctrl;
+        if (isContainerIdField(key, def)) {
+          ctrl = document.createElement('select');
+          ctrl.innerHTML = '<option value="">Loading…</option>';
+          ctrl.dataset.type = 'container_id';
+          fetchContainers(serverSelect.value).then(containers => {
+            populateContainerSelect(ctrl, containers, String(val || ''));
+            syncToBuilder(argsInput.value);
+          });
+        } else if (def.type === 'boolean') {
+          ctrl = document.createElement('select');
+          ctrl.innerHTML = '<option value="false">false</option><option value="true">true</option>';
+          ctrl.value = String(val);
+          ctrl.dataset.type = 'boolean';
+        } else if (def.type === 'integer' || def.type === 'number') {
+          ctrl = document.createElement('input');
+          ctrl.type = 'number';
+          ctrl.value = val;
+          ctrl.dataset.type = def.type;
+        } else {
+          ctrl = document.createElement('input');
+          ctrl.type = 'text';
+          ctrl.value = val !== null ? String(val) : '';
+          ctrl.placeholder = def.type === 'array' ? '[]' : '';
+          ctrl.dataset.type = def.type === 'array' ? 'array' : 'string';
+        }
+        ctrl.dataset.key = key;
+        ctrl.style.cssText += ';' + INPUT;
+        ctrl.addEventListener('input', syncFromBuilder);
+        ctrl.addEventListener('change', syncFromBuilder);
+
+        wrap.appendChild(ctrl);
+        argBuilder.appendChild(wrap);
+      });
+
+      argBuilder.style.display = 'flex';
+    }
+
+    function refreshContainerDropdowns() {
+      argBuilder.querySelectorAll('[data-type="container_id"]').forEach(sel => {
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">Loading…</option>';
+        fetchContainers(serverSelect.value).then(containers => {
+          populateContainerSelect(sel, containers, currentVal);
+        });
+      });
+    }
+
+    argsInput.addEventListener('input', () => syncToBuilder(argsInput.value));
 
     function onToolChange() {
       const name = toolSelect.value;
       const tool = TOOLS.find(t => t.name === name);
-      if (!tool) { schemaHint.style.display = 'none'; return; }
+      if (!tool) { schemaHint.style.display = 'none'; argBuilder.style.display = 'none'; return; }
       const schema = tool.inputSchema || {};
       const required = schema.required || [];
       const props = Object.keys(schema.properties || {});
@@ -79,7 +221,9 @@ const formHtml = `
       } else {
         schemaHint.style.display = 'none';
       }
+      renderArgBuilder(schema);
       if (!initialLoad) argsInput.value = buildArgsTemplate(schema);
+      syncToBuilder(argsInput.value);
     }
 
     async function onServerChange() {
@@ -94,6 +238,7 @@ const formHtml = `
         toolSelect.innerHTML = '<option value="">— select a tool —</option>' +
           freshTools.map(t => '<option value="' + t.name + '"' + (t.name === prev ? ' selected' : '') + '>' + t.name + '</option>').join('');
         onToolChange();
+        refreshContainerDropdowns();
       } catch(e) { console.error(e); }
     }
 

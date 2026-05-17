@@ -68,6 +68,23 @@ app.get("/api/tools", async (req, res) => {
   }
 });
 
+app.get("/api/containers", async (req, res) => {
+  const server = req.query.server || null;
+  try {
+    const { data } = await axios.post(`${API_URL}/call-tool`, {
+      server,
+      tool_name: "list_containers",
+      arguments: { all: true },
+    });
+    const text = data.content?.[0]?.text || "[]";
+    let containers = [];
+    try { containers = JSON.parse(text); } catch {}
+    res.json(containers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get("/run-tool", async (req, res) => {
   const server = req.query.server || "";
   const { servers, tools } = await fetchServersAndTools(server);
